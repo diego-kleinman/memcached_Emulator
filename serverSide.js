@@ -162,6 +162,7 @@ const proccessValueHelper = (socket, commandLine, currentValue, input) => {
                 replaceFunction(commandLine, value, socket)
                 break;
             case "append":
+                appendFunction(commandLine, value, socket)
                 break;
             case "prepend":
                 break;
@@ -184,6 +185,19 @@ const proccessValueHelper = (socket, commandLine, currentValue, input) => {
         resetInput(socket)
         socket.send("CLIENT_ERROR bad data chunk")
     }
+}
+
+const appendFunction = (commandLine, value, socket) => {
+    let { key, bytes, cas } = commandLine
+    //If key is already in cache, append value
+    if (cache[key] !== undefined) {
+        let newBytes = cache[key].bytes + bytes
+        let newValue = cache[key].value + value
+        cache[key].bytes = newBytes
+        cache[key].value = newValue
+        socket.send("STORED")
+    }
+    else { socket.send("NOT_STORED") }
 }
 
 const setFunction = (commandLine, value, socket) => {
@@ -247,4 +261,6 @@ const putObjectInCache = (key, value, flags, exptime, bytes, cas) => {
 const resetInput = (socket) => {
     currentClientsInputs[socket.id] = [undefined, "", true]
 }
+
+
 
