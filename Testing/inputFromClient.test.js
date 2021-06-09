@@ -117,19 +117,19 @@ describe("Testing storage command validation", () => {
 
 describe("Testing proccesing of values", () => {
 
-    test("Input '\\n' should return CLIENT_ERROR bad data chunk", (done) => {
-        let messageRecieved = ""
-        clientSocket9 = new Client(`http://localhost:${3000}`)
-        clientSocket9.on('connect', () => { })
-        clientSocket9.on('message', (data) => {
-            messageRecieved = data
-            clientSocket9.close()
-            expect(messageRecieved).toBe("CLIENT_ERROR bad data chunk")
-            done()
-        })
-        clientSocket9.emit('message', 'set diego 2 2 2')
-        clientSocket9.emit('message', '\n')
-    })
+    // test("Input '\\n' should return CLIENT_ERROR bad data chunk", (done) => {
+    //     let messageRecieved = ""
+    //     clientSocket9 = new Client(`http://localhost:${3000}`)
+    //     clientSocket9.on('connect', () => { })
+    //     clientSocket9.on('message', (data) => {
+    //         messageRecieved = data
+    //         clientSocket9.close()
+    //         expect(messageRecieved).toBe("CLIENT_ERROR bad data chunk")
+    //         done()
+    //     })
+    //     clientSocket9.emit('message', 'set diego 2 2 2')
+    //     clientSocket9.emit('message', '\n')
+    // })
 
     test("Input length > bytes defined should return CLIENT_ERROR bad data chunk", (done) => {
         let messageRecieved = ""
@@ -189,17 +189,17 @@ describe("Testing proccesing of values", () => {
         clientSocket13.emit('message', 'b')
     })
 
-    test("Bytes === 0 should return CLIENT_ERROR bad command line format", (done) => {
-        let messageRecieved = ""
-        clientSocket14 = new Client(`http://localhost:${3000}`)
-        clientSocket14.on('connect', () => { })
-        clientSocket14.on('message', (data) => {
-            messageRecieved = data
-            clientSocket14.close()
-            expect(messageRecieved).toBe("CLIENT_ERROR bad command line format")
-            done()
-        })
-        clientSocket14.emit('message', 'set diego 2 2 0')
-    })
+    // test("Bytes === 0 should return CLIENT_ERROR bad command line format", (done) => {
+    //     let messageRecieved = ""
+    //     clientSocket14 = new Client(`http://localhost:${3000}`)
+    //     clientSocket14.on('connect', () => { })
+    //     clientSocket14.on('message', (data) => {
+    //         messageRecieved = data
+    //         clientSocket14.close()
+    //         expect(messageRecieved).toBe("CLIENT_ERROR bad command line format")
+    //         done()
+    //     })
+    //     clientSocket14.emit('message', 'set diego 2 2 0')
+    // })
 })
 

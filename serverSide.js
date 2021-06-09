@@ -10,12 +10,13 @@ const io = new Server(server);
 let cache = {
 }
 
+//socket.id : [ command input, value input, firstInputLine (true,false) ]
 let currentClientsInputs = {
 }
 
 io.on('connection', (socket) => {
     console.log('new client connected --> Socket id: ' + socket.id)
-    currentClientsInputs[socket.id] = [undefined, ""]
+    currentClientsInputs[socket.id] = [undefined, "", true]
 
     socket.on('message', (data) => {
         try {
@@ -110,8 +111,8 @@ const storageCommandValidator = (data) => {
         else if ((flags % flags) !== 0 && parseInt(flags) !== 0 || parseInt(flags) > 65535) {
             return result
         }
-        //Check bytes integer // bytes !== 0 // bytes less than max storage possible (1MB -- 1048576 bytes) // bytes not negative
-        else if ((bytes % bytes) !== 0 || parseInt(bytes) > 1048576 || parseInt(bytes) < 0) {
+        //Check bytes integer // bytes less than max storage possible (1MB -- 1048576 bytes) // bytes not negative
+        else if ((bytes % bytes) !== 0 && parseInt(bytes) !== 0 || parseInt(bytes) > 1048576 || parseInt(bytes) < 0) {
             return result
         }
         // Check exptime integer
@@ -131,56 +132,63 @@ const storageCommandValidator = (data) => {
 const processValue = (socket, value) => {
     let commandLine = currentClientsInputs[socket.id][0]
     let currentValue = currentClientsInputs[socket.id][1]
+    let firstLine = currentClientsInputs[socket.id][2]
     let trimmed = value.trim()
 
-    //Check if user wrote something
-    if (trimmed.length !== 0) {
-
-        //If length is exactly as expected I process the input depending on the command asociated
-        if (currentValue.length + trimmed.length === commandLine.bytes) {
-            let value = currentValue + trimmed
-            switch (commandLine.command) {
-                case "set":
-                    setFunction(commandLine, value, socket)
-                    break;
-                case "add":
-                    addFunction(commandLine, value, socket)
-                    break;
-                case "replace":
-                    replaceFunction(commandLine, value, socket)
-                    break;
-                case "append":
-                    break;
-                case "prepend":
-                    break;
-                case "cas":
-                    break;
-                default:
-                    socket.send("Proccess value switch error")
-                    break;
-            }
-        }
-        //If it's less I add the data to the value and keep listening for new inputs
-        else if (currentValue.length + trimmed.length < commandLine.bytes) {
-            currentClientsInputs[socket.id][1] += trimmed
-        }
-        //If length is greater than defined bytes I return error and erase the data of the currentClient
-        else {
-            socket.send("CLIENT_ERROR bad data chunk")
-            currentClientsInputs[socket.id] = [undefined, ""]
-        }
+    //For the first line memcached trims the input
+    if (firstLine) {
+        proccessValueHelper(socket, commandLine, currentValue, trimmed)
     }
     else {
+        proccessValueHelper(socket, commandLine, currentValue, value)
+    }
+}
+
+const proccessValueHelper = (socket, commandLine, currentValue, input) => {
+
+    input = input.replace("\n", "\r\n")
+
+    //If length is exactly as expected I process the input depending on the command asociated
+    if (currentValue.length + input.length === commandLine.bytes) {
+        let value = currentValue + input
+        switch (commandLine.command) {
+            case "set":
+                setFunction(commandLine, value, socket)
+                break;
+            case "add":
+                addFunction(commandLine, value, socket)
+                break;
+            case "replace":
+                replaceFunction(commandLine, value, socket)
+                break;
+            case "append":
+                break;
+            case "prepend":
+                break;
+            case "cas":
+                break;
+            default:
+                socket.send("Proccess value switch error")
+                break;
+        }
+        resetInput(socket)
+    }
+    //If it's less I add the data to the value and keep listening for new inputs
+    else if (currentValue.length + input.length < commandLine.bytes) {
+        currentClientsInputs[socket.id][1] += input
+        //First input line has been already processed
+        currentClientsInputs[socket.id][2] = false
+    }
+    //If length is greater than defined bytes I return error and erase the data of the currentClient
+    else {
+        resetInput(socket)
         socket.send("CLIENT_ERROR bad data chunk")
-        currentClientsInputs[socket.id] = [undefined, ""]
     }
 }
 
 const setFunction = (commandLine, value, socket) => {
     let { key, flags, exptime, bytes, cas } = commandLine
-
     putObjectInCache(key, value, flags, exptime, bytes, cas)
-    currentClientsInputs[socket.id] = [undefined, ""]
     socket.send("STORED")
 }
 
@@ -190,10 +198,9 @@ const addFunction = (commandLine, value, socket) => {
     //If key isn't in cache I can add it
     if (cache[key] === undefined) {
         putObjectInCache(key, value, flags, exptime, bytes, cas)
-        currentClientsInputs[socket.id] = [undefined, ""]
         socket.send("STORED")
     }
-    else {socket.send("NOT_STORED")}
+    else { socket.send("NOT_STORED") }
 }
 
 const replaceFunction = (commandLine, value, socket) => {
@@ -202,10 +209,9 @@ const replaceFunction = (commandLine, value, socket) => {
     //If key isn't in cache I can add it
     if (cache[key] !== undefined) {
         putObjectInCache(key, value, flags, exptime, bytes, cas)
-        currentClientsInputs[socket.id] = [undefined, ""]
         socket.send("STORED")
     }
-    else {socket.send("NOT_STORED")}
+    else { socket.send("NOT_STORED") }
 }
 
 const getFunction = (socket, data) => {
@@ -236,5 +242,9 @@ const putObjectInCache = (key, value, flags, exptime, bytes, cas) => {
     } catch (error) {
         console.log(error)
     }
+}
+
+const resetInput = (socket) => {
+    currentClientsInputs[socket.id] = [undefined, "", true]
 }
 
