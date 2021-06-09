@@ -55,27 +55,35 @@ const proccessCommand = (socket, input) => {
         case "gets":
             break;
         case "set":
-            //If command is valid I add it to currentClientsInputs
-            if (storageCommandValidator(data)) {
-                createCommand(socket.id, command, data)
-            }
-            else {
-                socket.send("CLIENT_ERROR bad command line format")
-            }
+            processCommandHelper(data,socket,command)
             break;
         case "add":
+            processCommandHelper(data,socket,command)
             break;
         case "replace":
+            processCommandHelper(data,socket,command)
             break;
         case "append":
+            processCommandHelper(data,socket,command)
             break;
         case "prepend":
+            processCommandHelper(data,socket,command)
             break;
         case "cas":
             break;
         default:
             socket.send("ERROR")
             break;
+    }
+}
+
+const processCommandHelper = (data, socket, command) => {
+    //If command is valid I add it to currentClientsInputs
+    if (storageCommandValidator(data)) {
+        createCommand(socket.id, command, data)
+    }
+    else {
+        socket.send("CLIENT_ERROR bad command line format")
     }
 }
 
@@ -165,6 +173,7 @@ const proccessValueHelper = (socket, commandLine, currentValue, input) => {
                 appendFunction(commandLine, value, socket)
                 break;
             case "prepend":
+                prependFunction(commandLine, value, socket)
                 break;
             case "cas":
                 break;
@@ -193,6 +202,19 @@ const appendFunction = (commandLine, value, socket) => {
     if (cache[key] !== undefined) {
         let newBytes = cache[key].bytes + bytes
         let newValue = cache[key].value + value
+        cache[key].bytes = newBytes
+        cache[key].value = newValue
+        socket.send("STORED")
+    }
+    else { socket.send("NOT_STORED") }
+}
+
+const prependFunction = (commandLine, value, socket) => {
+    let { key, bytes, cas } = commandLine
+    //If key is already in cache, append value
+    if (cache[key] !== undefined) {
+        let newBytes = cache[key].bytes + bytes
+        let newValue = value + cache[key].value
         cache[key].bytes = newBytes
         cache[key].value = newValue
         socket.send("STORED")
