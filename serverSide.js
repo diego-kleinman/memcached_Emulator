@@ -2,7 +2,6 @@ const port = 3000;
 const express = require('express');
 const app = express();
 const http = require('http');
-const { parse } = require('path');
 const server = http.createServer(app);
 const { Server } = require("socket.io");
 const io = new Server(server);
@@ -55,19 +54,19 @@ const proccessCommand = (socket, input) => {
         case "gets":
             break;
         case "set":
-            processCommandHelper(data,socket,command)
+            processCommandHelper(data, socket, command)
             break;
         case "add":
-            processCommandHelper(data,socket,command)
+            processCommandHelper(data, socket, command)
             break;
         case "replace":
-            processCommandHelper(data,socket,command)
+            processCommandHelper(data, socket, command)
             break;
         case "append":
-            processCommandHelper(data,socket,command)
+            processCommandHelper(data, socket, command)
             break;
         case "prepend":
-            processCommandHelper(data,socket,command)
+            processCommandHelper(data, socket, command)
             break;
         case "cas":
             break;
@@ -94,7 +93,9 @@ const createCommand = (socketId, command, data) => {
         "key": data[1],
         "flags": data[2],
         "exptime": parseInt(data[3]),
-        "bytes": parseInt(data[4])
+        "bytes": parseInt(data[4]),
+        //it can be something or undefined
+        "noreply": data[5]
     }
     currentClientsInputs[socketId][0] = newCommand
 }
@@ -104,8 +105,8 @@ const createCommand = (socketId, command, data) => {
 //let cas = data[5] 
 const storageCommandValidator = (data) => {
     let result = false
-    //Check for command, key, flags, exptime, bytes
-    if (data.length >= 5) {
+    //Check for command, key, flags, exptime, bytes , optional: noreply
+    if (data.length === 5 || data.length === 6) {
         let key = data[1]
         let flags = data[2]
         let exptime = data[3]
@@ -159,21 +160,26 @@ const proccessValueHelper = (socket, commandLine, currentValue, input) => {
     //If length is exactly as expected I process the input depending on the command asociated
     if (currentValue.length + input.length === commandLine.bytes) {
         let value = currentValue + input
+        let { noreply } = commandLine
+        let boolean = false
+        if (noreply === "noreply") {
+            boolean = true
+        }
         switch (commandLine.command) {
             case "set":
-                setFunction(commandLine, value, socket)
+                setFunction(commandLine, value, socket, boolean)
                 break;
             case "add":
-                addFunction(commandLine, value, socket)
+                addFunction(commandLine, value, socket, boolean)
                 break;
             case "replace":
-                replaceFunction(commandLine, value, socket)
+                replaceFunction(commandLine, value, socket, boolean)
                 break;
             case "append":
-                appendFunction(commandLine, value, socket)
+                appendFunction(commandLine, value, socket, boolean)
                 break;
             case "prepend":
-                prependFunction(commandLine, value, socket)
+                prependFunction(commandLine, value, socket, boolean)
                 break;
             case "cas":
                 break;
@@ -196,58 +202,67 @@ const proccessValueHelper = (socket, commandLine, currentValue, input) => {
     }
 }
 
-const appendFunction = (commandLine, value, socket) => {
+const appendFunction = (commandLine, value, socket, boolean) => {
     let { key, bytes, cas } = commandLine
+    let response = ""
     //If key is already in cache, append value
     if (cache[key] !== undefined) {
         let newBytes = cache[key].bytes + bytes
         let newValue = cache[key].value + value
         cache[key].bytes = newBytes
         cache[key].value = newValue
-        socket.send("STORED")
+        response = "STORED"
     }
-    else { socket.send("NOT_STORED") }
+    else { response = "NOT_STORED" }
+    sendResponse(socket, response, noreply)
 }
 
-const prependFunction = (commandLine, value, socket) => {
+const prependFunction = (commandLine, value, socket, noreply) => {
     let { key, bytes, cas } = commandLine
+    let response = ""
     //If key is already in cache, append value
     if (cache[key] !== undefined) {
         let newBytes = cache[key].bytes + bytes
         let newValue = value + cache[key].value
         cache[key].bytes = newBytes
         cache[key].value = newValue
-        socket.send("STORED")
+        response = "STORED"
     }
-    else { socket.send("NOT_STORED") }
+    else { response = "NOT_STORED" }
+    sendResponse(socket, response, noreply)
 }
 
-const setFunction = (commandLine, value, socket) => {
+const setFunction = (commandLine, value, socket, noreply) => {
     let { key, flags, exptime, bytes, cas } = commandLine
     putObjectInCache(key, value, flags, exptime, bytes, cas)
-    socket.send("STORED")
+    sendResponse(socket, "STORED", noreply)
 }
 
-const addFunction = (commandLine, value, socket) => {
+const addFunction = (commandLine, value, socket, noreply) => {
     let { key, flags, exptime, bytes, cas } = commandLine
+    let response = ""
 
     //If key isn't in cache I can add it
     if (cache[key] === undefined) {
         putObjectInCache(key, value, flags, exptime, bytes, cas)
-        socket.send("STORED")
+        response = "STORED"
+
     }
-    else { socket.send("NOT_STORED") }
+    else { response = "NOT_STORED" }
+    sendResponse(socket, response, noreply)
 }
 
 const replaceFunction = (commandLine, value, socket) => {
     let { key, flags, exptime, bytes, cas } = commandLine
+    let response = ""
 
     //If key isn't in cache I can add it
     if (cache[key] !== undefined) {
         putObjectInCache(key, value, flags, exptime, bytes, cas)
-        socket.send("STORED")
+        response = "STORED"
     }
-    else { socket.send("NOT_STORED") }
+    else { response = "NOT_STORED" }
+    sendResponse(socket, response, noreply)
 }
 
 const getFunction = (socket, data) => {
@@ -284,5 +299,10 @@ const resetInput = (socket) => {
     currentClientsInputs[socket.id] = [undefined, "", true]
 }
 
+const sendResponse = (socket, response, noreply) => {
+    if (!noreply) {
+        socket.send(response)
+    }
+}
 
 
