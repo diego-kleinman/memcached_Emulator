@@ -54,7 +54,7 @@ const proccessCommand = (socket, input) => {
             getFunction(socket, data)
             break;
         case "gets":
-            getsFunction(socket,data)
+            getsFunction(socket, data)
             break;
         case "set":
             processCommandHelper(data, socket, command)
@@ -72,11 +72,78 @@ const proccessCommand = (socket, input) => {
             processCommandHelper(data, socket, command)
             break;
         case "cas":
+            //cas <key> <flags> <exptime> <bytes> <cas unique> [noreply]\r\n
+            processCasHelper(data, socket, command)
             break;
         default:
             socket.send("ERROR")
             break;
     }
+}
+
+const processCasHelper = (data, socket, command) => {
+    //If command is valid I add it to currentClientsInputs
+    if (casCommandValidator(data)) {
+        createCasCommand(socket.id, command, data)
+    }
+    else {
+        socket.send("CLIENT_ERROR bad command line format")
+    }
+}
+
+const casCommandValidator = (data) => {
+    let result = false
+    //Check for command, key, flags, exptime, bytes , cas , optional: noreply
+    if (data.length > 5 && data.length <= 7) {
+        let key = data[1]
+        let flags = data[2]
+        let exptime = data[3]
+        let bytes = data[4]
+        let casValue = data[5]
+
+        //check max length of key
+        if (key.length > 250) {
+            return result
+        }
+        //Check flags 16 bits unsigned integer
+        else if ((flags % flags) !== 0 && parseInt(flags) !== 0 || parseInt(flags) > 65535) {
+            return result
+        }
+        //Check bytes integer // bytes less than max storage possible (1MB -- 1048576 bytes) // bytes not negative
+        else if ((bytes % bytes) !== 0 && parseInt(bytes) !== 0 || parseInt(bytes) > 1048576 || parseInt(bytes) < 0) {
+            return result
+        }
+        // Check exptime integer
+        else if ((exptime % exptime) !== 0 && parseInt(exptime) !== 0) {
+            return result
+        }
+        // Check cas integer
+        else if ((casValue % casValue) !== 0 && parseInt(casValue) !== 0) {
+            return result
+        }
+        //If all checks are OK
+        else {
+            result = true
+            return result
+        }
+    }
+    return result
+
+}
+
+const createCasCommand = (socketId, command, data) => {
+    // Put the command in the key asociated with the socket into the currentClientsInputs object
+    let newCasCommand = {
+        "command": command,
+        "key": data[1],
+        "flags": data[2],
+        "exptime": parseInt(data[3]),
+        "bytes": parseInt(data[4]),
+        //it can be something or undefined
+        "cas": parseInt(data[5]),
+        "noreply": data[6]
+    }
+    currentClientsInputs[socketId][0] = newCasCommand
 }
 
 const processCommandHelper = (data, socket, command) => {
@@ -103,9 +170,6 @@ const createCommand = (socketId, command, data) => {
     currentClientsInputs[socketId][0] = newCommand
 }
 
-//CHEQUEAR SI PARÁMETRO CAS ES OPCIONAL
-//CHEQUEAR PARÁMETRO CAS
-//let cas = data[5] 
 const storageCommandValidator = (data) => {
     let result = false
     //Check for command, key, flags, exptime, bytes , optional: noreply
@@ -185,6 +249,7 @@ const proccessValueHelper = (socket, commandLine, currentValue, input) => {
                 prependFunction(commandLine, value, socket, boolean)
                 break;
             case "cas":
+                casFunction(commandLine, value, socket, boolean)
                 break;
             default:
                 socket.send("Proccess value switch error")
@@ -205,6 +270,26 @@ const proccessValueHelper = (socket, commandLine, currentValue, input) => {
     }
 }
 
+const casFunction = (commandLine, value, socket, noreply) => {
+    let { key, flags, exptime, bytes, cas } = commandLine
+    let response = ""
+    //If object exists in cache
+    if (cache[key] !== undefined) {
+        if(cache[key].cas === cas){
+            putObjectInCache(key, value, flags, exptime, bytes)
+            response = "STORED"
+        }
+        else{
+            response = "EXISTS"
+        }
+        
+    }
+    else {
+        response = "NOT_FOUND"
+    }
+    sendResponse(socket, response , noreply)
+}
+
 const appendFunction = (commandLine, value, socket, noreply) => {
     let { key, bytes } = commandLine
     let response = ""
@@ -212,7 +297,6 @@ const appendFunction = (commandLine, value, socket, noreply) => {
     if (cache[key] !== undefined) {
         let newBytes = cache[key].bytes + bytes
         let newValue = cache[key].value + value
-        // let newCas = cache[key].cas + 1
         cache[key].bytes = newBytes
         cache[key].value = newValue
         cache[key].cas = currentCas
@@ -230,7 +314,6 @@ const prependFunction = (commandLine, value, socket, noreply) => {
     if (cache[key] !== undefined) {
         let newBytes = cache[key].bytes + bytes
         let newValue = value + cache[key].value
-        // let newCas = cache[key].cas + 1
         cache[key].bytes = newBytes
         cache[key].value = newValue
         cache[key].cas = currentCas
@@ -243,13 +326,6 @@ const prependFunction = (commandLine, value, socket, noreply) => {
 
 const setFunction = (commandLine, value, socket, noreply) => {
     let { key, flags, exptime, bytes } = commandLine
-    // if (cache[key] !== undefined) {
-    //     let newCas = cache[key].cas + 1
-    //     putObjectInCache(key, value, flags, exptime, bytes, newCas)
-    // }
-    // else{
-    //     putObjectInCache(key, value, flags, exptime, bytes, 1)  
-    // }
     putObjectInCache(key, value, flags, exptime, bytes)
     sendResponse(socket, "STORED", noreply)
 }
@@ -260,7 +336,6 @@ const addFunction = (commandLine, value, socket, noreply) => {
 
     //If key isn't in cache I can add it
     if (cache[key] === undefined) {
-        // putObjectInCache(key, value, flags, exptime, bytes, 1)
         putObjectInCache(key, value, flags, exptime, bytes)
         response = "STORED"
     }
@@ -274,7 +349,6 @@ const replaceFunction = (commandLine, value, socket, noreply) => {
 
     //If key is in cache I can replace it
     if (cache[key] !== undefined) {
-        // let newCas = cache[key].cas + 1
         putObjectInCache(key, value, flags, exptime, bytes)
         response = "STORED"
     }
