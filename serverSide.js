@@ -6,6 +6,8 @@ const server = http.createServer(app);
 const { Server } = require("socket.io");
 const io = new Server(server);
 
+let currentCas = 1
+
 let cache = {
 }
 
@@ -52,6 +54,7 @@ const proccessCommand = (socket, input) => {
             getFunction(socket, data)
             break;
         case "gets":
+            getsFunction(socket,data)
             break;
         case "set":
             processCommandHelper(data, socket, command)
@@ -202,15 +205,18 @@ const proccessValueHelper = (socket, commandLine, currentValue, input) => {
     }
 }
 
-const appendFunction = (commandLine, value, socket, boolean) => {
-    let { key, bytes, cas } = commandLine
+const appendFunction = (commandLine, value, socket, noreply) => {
+    let { key, bytes } = commandLine
     let response = ""
     //If key is already in cache, append value
     if (cache[key] !== undefined) {
         let newBytes = cache[key].bytes + bytes
         let newValue = cache[key].value + value
+        // let newCas = cache[key].cas + 1
         cache[key].bytes = newBytes
         cache[key].value = newValue
+        cache[key].cas = currentCas
+        currentCas++
         response = "STORED"
     }
     else { response = "NOT_STORED" }
@@ -218,14 +224,17 @@ const appendFunction = (commandLine, value, socket, boolean) => {
 }
 
 const prependFunction = (commandLine, value, socket, noreply) => {
-    let { key, bytes, cas } = commandLine
+    let { key, bytes } = commandLine
     let response = ""
-    //If key is already in cache, append value
+    //If key is already in cache, prepend value
     if (cache[key] !== undefined) {
         let newBytes = cache[key].bytes + bytes
         let newValue = value + cache[key].value
+        // let newCas = cache[key].cas + 1
         cache[key].bytes = newBytes
         cache[key].value = newValue
+        cache[key].cas = currentCas
+        currentCas++
         response = "STORED"
     }
     else { response = "NOT_STORED" }
@@ -233,32 +242,40 @@ const prependFunction = (commandLine, value, socket, noreply) => {
 }
 
 const setFunction = (commandLine, value, socket, noreply) => {
-    let { key, flags, exptime, bytes, cas } = commandLine
-    putObjectInCache(key, value, flags, exptime, bytes, cas)
+    let { key, flags, exptime, bytes } = commandLine
+    // if (cache[key] !== undefined) {
+    //     let newCas = cache[key].cas + 1
+    //     putObjectInCache(key, value, flags, exptime, bytes, newCas)
+    // }
+    // else{
+    //     putObjectInCache(key, value, flags, exptime, bytes, 1)  
+    // }
+    putObjectInCache(key, value, flags, exptime, bytes)
     sendResponse(socket, "STORED", noreply)
 }
 
 const addFunction = (commandLine, value, socket, noreply) => {
-    let { key, flags, exptime, bytes, cas } = commandLine
+    let { key, flags, exptime, bytes } = commandLine
     let response = ""
 
     //If key isn't in cache I can add it
     if (cache[key] === undefined) {
-        putObjectInCache(key, value, flags, exptime, bytes, cas)
+        // putObjectInCache(key, value, flags, exptime, bytes, 1)
+        putObjectInCache(key, value, flags, exptime, bytes)
         response = "STORED"
-
     }
     else { response = "NOT_STORED" }
     sendResponse(socket, response, noreply)
 }
 
-const replaceFunction = (commandLine, value, socket) => {
-    let { key, flags, exptime, bytes, cas } = commandLine
+const replaceFunction = (commandLine, value, socket, noreply) => {
+    let { key, flags, exptime, bytes } = commandLine
     let response = ""
 
-    //If key isn't in cache I can add it
+    //If key is in cache I can replace it
     if (cache[key] !== undefined) {
-        putObjectInCache(key, value, flags, exptime, bytes, cas)
+        // let newCas = cache[key].cas + 1
+        putObjectInCache(key, value, flags, exptime, bytes)
         response = "STORED"
     }
     else { response = "NOT_STORED" }
@@ -277,7 +294,19 @@ const getFunction = (socket, data) => {
     socket.send(response)
 }
 
-const putObjectInCache = (key, value, flags, exptime, bytes, cas) => {
+const getsFunction = (socket, data) => {
+    let response = ""
+    for (let i = 1; i < data.length; i++) {
+        let cacheObject = cache[data[i]]
+        if (cacheObject !== undefined) {
+            response += `VALUE ${data[i]} ${cacheObject.flags} ${cacheObject.bytes} ${cacheObject.cas}\n${cacheObject.value}\n`
+        }
+    }
+    response += "END"
+    socket.send(response)
+}
+
+const putObjectInCache = (key, value, flags, exptime, bytes) => {
     //If exptime < 0 , value is not stored in cache
     try {
         if (exptime >= 0) {
@@ -286,9 +315,10 @@ const putObjectInCache = (key, value, flags, exptime, bytes, cas) => {
                 "flags": flags,
                 "exptime": exptime,
                 "bytes": bytes,
-                "cas": cas
+                "cas": currentCas
             }
             cache[key] = newCacheObject
+            currentCas++
         }
     } catch (error) {
         console.log(error)
