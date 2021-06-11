@@ -33,7 +33,7 @@ let cache = {
  * 
  * "firstLine" is a boolean that identifies if client is sending it's first line of value input
  * 
- * For example --> "12390i20198" : { "set test 2 0 2", "ab", true}
+ * For example --> "12390i20198" : ["set test 2 0 2", "ab", true]
  */
 let currentClientsInputs = {
 }
