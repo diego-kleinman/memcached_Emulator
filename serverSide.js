@@ -472,3 +472,23 @@ const sendResponse = (socket, response, noreply) => {
         socket.send(response)
     }
 }
+
+/**
+ * This function is in charge of purging expired keys
+ * 
+ * It goes through the cache and resets exptime values or deletes cache objects
+ */
+const purgeProcess = () => {
+    Object.keys(cache).forEach(element => {
+        let { exptime } = cache[element]
+        if (exptime === 1) {
+            delete cache[element]
+        }
+        else if (exptime > 1) {
+            cache[element].exptime = exptime - 1
+        }
+    });
+    setTimeout(purgeProcess, 1000);
+}
+
+purgeProcess();
