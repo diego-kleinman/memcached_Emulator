@@ -11,7 +11,7 @@ socket.on('disconnect', () => {
 })
 
 socket.on('message', (data) => {
-    console.log(chalk.green(data));
+    console.log(data);
 })
 
 repl.start({

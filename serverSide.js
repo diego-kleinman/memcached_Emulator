@@ -6,24 +6,48 @@ const server = http.createServer(app);
 const { Server } = require("socket.io");
 const io = new Server(server);
 
+/**
+ * Variable that represents the current cas value being used by the server
+ * 
+ * This value updates everytime a storage function executes
+ */
 let currentCas = 1
 
+/**
+ * Js object that represents "key : value" pairs currently stored in the server
+ * 
+ * For example --> "test" : { value = "ab", flags = 2, exptime = 0 , bytes = 2 ,cas = 2 }
+ */
 let cache = {
 }
 
 //socket.id : [ command input, value input, firstInputLine (true,false) ]
+/**
+ * Js object that represents "key : value" pairs of current inputs from clients connected to server
+ * 
+ * Keys are socket id's and values are arrays of: [command, value, firstLine]
+ * 
+ * "firstLine" is a boolean that identifies if client is sending it's first line of value input
+ * 
+ * For example --> "12390i20198" : { "set test 2 0 2", "ab", true}
+ */
 let currentClientsInputs = {
 }
 
+// When a client connects to server
 io.on('connection', (socket) => {
     console.log('new client connected --> Socket id: ' + socket.id)
+    // Initializes the client input
     currentClientsInputs[socket.id] = [undefined, "", true]
 
+    //When server recieves a message from a client connected
     socket.on('message', (data) => {
         try {
+            // If the client is sending a command
             if (currentClientsInputs[socket.id][0] === undefined) {
                 proccessCommand(socket, data)
             }
+            // If the client is sending a value
             else {
                 processValue(socket, data)
             }
@@ -32,67 +56,123 @@ io.on('connection', (socket) => {
         }
     })
 
+    //When a client disconnects, server erases the client input
     socket.on('disconnect', () => {
         console.log("Socket :" + socket.id + " disconnected")
         delete currentClientsInputs[socket.id]
     })
 })
 
+// When server itself disconnects
 io.on('disconnect', (event) => {
     console.log('disconnected')
 })
 
+//The servers starts listening to the port
 server.listen(port, () => {
     console.log(`listening on port ${port}`);
 });
 
+/**
+ * This function triggers different actions depending on the command input from client
+ * @param {socket} socket Socket client is connected from
+ * @param {string} input Command input from client
+ */
 const proccessCommand = (socket, input) => {
     let data = input.trim().split(' ')
     let command = data[0]
-    switch (command) {
-        case "get":
-            getFunction(socket, data)
-            break;
-        case "gets":
-            getsFunction(socket, data)
-            break;
-        case "set":
-            processCommandHelper(data, socket, command)
-            break;
-        case "add":
-            processCommandHelper(data, socket, command)
-            break;
-        case "replace":
-            processCommandHelper(data, socket, command)
-            break;
-        case "append":
-            processCommandHelper(data, socket, command)
-            break;
-        case "prepend":
-            processCommandHelper(data, socket, command)
-            break;
-        case "cas":
-            //cas <key> <flags> <exptime> <bytes> <cas unique> [noreply]\r\n
-            processCasHelper(data, socket, command)
-            break;
-        default:
-            socket.send("ERROR")
-            break;
+    //If the command is "get" I just execute the function
+    if (command === "get") {
+        getFunction(socket, data)
+    }
+    //Also for "gets" command
+    else if (command === "gets") {
+        getsFunction(socket, data)
+    }
+    else if (command === "cas") {
+        processCasHelper(socket, data)
+    }
+    else if (command === "set" || command === "add" || command === "replace" || command === "append" || command === "prepend") {
+        processCommandHelper(socket, data)
+    }
+    else {
+        socket.send("ERROR")
     }
 }
 
-const processCasHelper = (data, socket, command) => {
-    //If command is valid I add it to currentClientsInputs
-    if (casCommandValidator(data)) {
-        createCasCommand(socket.id, command, data)
+/**
+ * Helper function for processing storage non-cas commands
+ * @param {socket} socket Socket client is connected from
+ * @param {[string]} data Array containing command from client splitted by spaces
+ */
+const processCommandHelper = (socket, data) => {
+    //If command is valid
+    if (storageCommandValidator(data)) {
+        createCommand(socket.id, data)
     }
     else {
         socket.send("CLIENT_ERROR bad command line format")
     }
 }
 
+/**
+ * Helper function for processing cas command
+ * @param {socket} socket Socket client is connected from
+ * @param {[string]} data Array containing command from client splitted by spaces
+ */
+const processCasHelper = (socket, data) => {
+    //If command is valid
+    if (casCommandValidator(data)) {
+        createCasCommand(socket.id, data)
+    }
+    else {
+        socket.send("CLIENT_ERROR bad command line format")
+    }
+}
+
+/**
+ * This function validates if a storage non-cas command is well made
+ * @param {[string]} data Array containing command from client splitted by spaces
+ * @returns true if command is well made ; false otherwise
+ */
+const storageCommandValidator = (data) => {
+    //Check for command, key, flags, exptime, bytes , optional: noreply
+    if (data.length === 5 || data.length === 6) {
+        let key = data[1]
+        let flags = data[2]
+        let exptime = data[3]
+        let bytes = data[4]
+
+        //check max length of key
+        if (key.length > 250) {
+            return false
+        }
+        //Check flags 16 bits unsigned integer
+        else if ((flags % flags) !== 0 && parseInt(flags) !== 0 || parseInt(flags) > 65535) {
+            return false
+        }
+        //Check bytes integer // bytes less than max storage possible (1MB -- 1048576 bytes) // bytes not negative
+        else if ((bytes % bytes) !== 0 && parseInt(bytes) !== 0 || parseInt(bytes) > 1048576 || parseInt(bytes) < 0) {
+            return false
+        }
+        // Check exptime integer
+        else if ((exptime % exptime) !== 0 && parseInt(exptime) !== 0) {
+            return false
+        }
+        //If all checks are OK
+        else {
+            return true
+        }
+    }
+    return false
+}
+
+/**
+ * This function validates if a cas command is well made
+ * @param {[string]} data Array containing command from client splitted by spaces
+ * @returns true if command is well made ; false otherwise
+ */
 const casCommandValidator = (data) => {
-    let result = false
     //Check for command, key, flags, exptime, bytes , cas , optional: noreply
     if (data.length > 5 && data.length <= 7) {
         let key = data[1]
@@ -103,135 +183,122 @@ const casCommandValidator = (data) => {
 
         //check max length of key
         if (key.length > 250) {
-            return result
+            return false
         }
         //Check flags 16 bits unsigned integer
         else if ((flags % flags) !== 0 && parseInt(flags) !== 0 || parseInt(flags) > 65535) {
-            return result
+            return false
         }
         //Check bytes integer // bytes less than max storage possible (1MB -- 1048576 bytes) // bytes not negative
         else if ((bytes % bytes) !== 0 && parseInt(bytes) !== 0 || parseInt(bytes) > 1048576 || parseInt(bytes) < 0) {
-            return result
+            return false
         }
         // Check exptime integer
         else if ((exptime % exptime) !== 0 && parseInt(exptime) !== 0) {
-            return result
+            return false
         }
         // Check cas integer
         else if ((casValue % casValue) !== 0 && parseInt(casValue) !== 0) {
-            return result
+            return false
         }
         //If all checks are OK
         else {
-            result = true
-            return result
+            return true
         }
     }
-    return result
-
+    return false
 }
 
-const createCasCommand = (socketId, command, data) => {
-    // Put the command in the key asociated with the socket into the currentClientsInputs object
-    let newCasCommand = {
-        "command": command,
-        "key": data[1],
-        "flags": data[2],
-        "exptime": parseInt(data[3]),
-        "bytes": parseInt(data[4]),
-        //it can be something or undefined
-        "cas": parseInt(data[5]),
-        "noreply": data[6]
-    }
-    currentClientsInputs[socketId][0] = newCasCommand
-}
-
-const processCommandHelper = (data, socket, command) => {
-    //If command is valid I add it to currentClientsInputs
-    if (storageCommandValidator(data)) {
-        createCommand(socket.id, command, data)
-    }
-    else {
-        socket.send("CLIENT_ERROR bad command line format")
-    }
-}
-
-const createCommand = (socketId, command, data) => {
-    // Put the command in the key asociated with the socket into the currentClientsInputs object
+/**
+ * This function creates a command object from client's input and puts it to the currentClientsInputs object
+ * @param {string} socketId : Id of client's socket
+ * @param {[string]} data Array containing command from client splitted by spaces
+ */
+const createCommand = (socketId, data) => {
+    // create command
     let newCommand = {
-        "command": command,
+        "command": data[0],
         "key": data[1],
         "flags": data[2],
         "exptime": parseInt(data[3]),
         "bytes": parseInt(data[4]),
-        //it can be something or undefined
+        //it can be something or undefined / optional parameter
         "noreply": data[5]
     }
+    // put it in the client input
     currentClientsInputs[socketId][0] = newCommand
 }
 
-const storageCommandValidator = (data) => {
-    let result = false
-    //Check for command, key, flags, exptime, bytes , optional: noreply
-    if (data.length === 5 || data.length === 6) {
-        let key = data[1]
-        let flags = data[2]
-        let exptime = data[3]
-        let bytes = data[4]
-
-        //check max length of key
-        if (key.length > 250) {
-            return result
-        }
-        //Check flags 16 bits unsigned integer
-        else if ((flags % flags) !== 0 && parseInt(flags) !== 0 || parseInt(flags) > 65535) {
-            return result
-        }
-        //Check bytes integer // bytes less than max storage possible (1MB -- 1048576 bytes) // bytes not negative
-        else if ((bytes % bytes) !== 0 && parseInt(bytes) !== 0 || parseInt(bytes) > 1048576 || parseInt(bytes) < 0) {
-            return result
-        }
-        // Check exptime integer
-        else if ((exptime % exptime) !== 0 && parseInt(exptime) !== 0) {
-            return result
-        }
-        //If all checks are OK
-        else {
-            result = true
-            return result
-        }
+/**
+ * This function creates a cas-command object from client's input and puts it to the currentClientsInputs object
+ * @param {string} socketId : Id of client's socket
+ * @param {[string]} data Array containing command from client splitted by spaces
+ */
+const createCasCommand = (socketId, data) => {
+    // create cas-command
+    let newCasCommand = {
+        "command": data[0],
+        "key": data[1],
+        "flags": data[2],
+        "exptime": parseInt(data[3]),
+        "bytes": parseInt(data[4]),
+        "cas": parseInt(data[5]),
+        //it can be something or undefined / optional parameter
+        "noreply": data[6]
     }
-    return result
-
+    // put it in the client input
+    currentClientsInputs[socketId][0] = newCasCommand
 }
 
+/**
+ * This function triggers different actions depending on the value input from client
+ * @param {socket} socket Socket client is connected from
+ * @param {string} value Value input from client
+ */
 const processValue = (socket, value) => {
+    //Get command that client has put
     let commandLine = currentClientsInputs[socket.id][0]
+    //Get value that client has put
     let currentValue = currentClientsInputs[socket.id][1]
+    //Get boolean representing if it's first valueInput line
     let firstLine = currentClientsInputs[socket.id][2]
     let trimmed = value.trim()
 
-    //For the first line memcached trims the input
+    //If it's first valueInput line, server doesn't count "\n" as an input
     if (firstLine) {
         proccessValueHelper(socket, commandLine, currentValue, trimmed)
     }
+    //For other lines it is counted
     else {
         proccessValueHelper(socket, commandLine, currentValue, value)
     }
 }
 
+/**
+ * This function is in charge of controlling value sent from client: 
+ * 
+ * Depending on that it triggers the corresponding action from the server
+ * @param {socket} socket Socket client is connected from
+ * @param {*} commandLine Command client has put
+ * @param {*} currentValue Current value client has put
+ * @param {*} input Value client is sending to the server
+ */
 const proccessValueHelper = (socket, commandLine, currentValue, input) => {
 
+    //For memcached "\n" represents "\r\n"
     input = input.replace("\n", "\r\n")
 
-    //If length is exactly as expected I process the input depending on the command asociated
+    //If length of (currentValue + input) is exactly as expected 
+    //The server processes the input depending on the command asociated
     if (currentValue.length + input.length === commandLine.bytes) {
         let value = currentValue + input
         let { noreply } = commandLine
         let boolean = false
+        //If noreply param is equal to "noreply", server doesn't have to respond
         if (noreply === "noreply") {
             boolean = true
         }
+        //Execute function depending on the command client has put
         switch (commandLine.command) {
             case "set":
                 setFunction(commandLine, value, socket, boolean)
@@ -252,44 +319,98 @@ const proccessValueHelper = (socket, commandLine, currentValue, input) => {
                 casFunction(commandLine, value, socket, boolean)
                 break;
             default:
-                socket.send("Proccess value switch error")
                 break;
         }
+        //After the command is executed, server resets the current input from the client (command, value and firstLine)
         resetInput(socket)
     }
-    //If it's less I add the data to the value and keep listening for new inputs
+    //If it's less than expected, the server add's the input to the value and keeps listening for new inputs
     else if (currentValue.length + input.length < commandLine.bytes) {
         currentClientsInputs[socket.id][1] += input
         //First input line has been already processed
         currentClientsInputs[socket.id][2] = false
     }
-    //If length is greater than defined bytes I return error and erase the data of the currentClient
+    //If it's greater than expected, server resets the current input from the client and returns error to client
     else {
         resetInput(socket)
         socket.send("CLIENT_ERROR bad data chunk")
     }
 }
 
+/**
+ * This function represents the "get" function from memcached
+ * @param {socket} socket Socket client is connected from
+ * @param {[string]} data Array containing command from client splitted by spaces
+ */
+const getFunction = (socket, data) => {
+    //Go over all the keys that client want's to get, generate a response matching memcached protocol
+    let response = ""
+    for (let i = 1; i < data.length; i++) {
+        let cacheObject = cache[data[i]]
+        if (cacheObject !== undefined) {
+            response += `VALUE ${data[i]} ${cacheObject.flags} ${cacheObject.bytes}\n${cacheObject.value}\n`
+        }
+    }
+    response += "END"
+    //Send it to the client
+    socket.send(response)
+}
+
+/**
+ * This function represents the "gets" function from memcached
+ * @param {socket} socket Socket client is connected from
+ * @param {[string]} data Array containing command from client splitted by spaces
+ */
+const getsFunction = (socket, data) => {
+    //Go over all the keys that client want's to get, generate a response matching memcached protocol
+    let response = ""
+    for (let i = 1; i < data.length; i++) {
+        let cacheObject = cache[data[i]]
+        if (cacheObject !== undefined) {
+            response += `VALUE ${data[i]} ${cacheObject.flags} ${cacheObject.bytes} ${cacheObject.cas}\n${cacheObject.value}\n`
+        }
+    }
+    response += "END"
+    //Send it to the client
+    socket.send(response)
+}
+
+/**
+ * This function represents the "cas" function from memcached
+ * @param {string} commandLine Command client has put
+ * @param {string} value Value client has put
+ * @param {socket} socket Socket client is connected from
+ * @param {boolean} noreply Boolean representing if client want's the server to respond or not
+ */
 const casFunction = (commandLine, value, socket, noreply) => {
     let { key, flags, exptime, bytes, cas } = commandLine
     let response = ""
+
     //If object exists in cache
     if (cache[key] !== undefined) {
-        if(cache[key].cas === cas){
+        //If cas from parameter corresponds to the object cas
+        if (cache[key].cas === cas) {
             putObjectInCache(key, value, flags, exptime, bytes)
             response = "STORED"
         }
-        else{
+        else {
             response = "EXISTS"
         }
-        
+
     }
     else {
         response = "NOT_FOUND"
     }
-    sendResponse(socket, response , noreply)
+    sendResponse(socket, response, noreply)
 }
 
+/**
+ * This function represents the "append" function from memcached
+ * @param {string} commandLine Command client has put
+ * @param {string} value Value client has put
+ * @param {socket} socket Socket client is connected from
+ * @param {boolean} noreply Boolean representing if client want's the server to respond or not
+ */
 const appendFunction = (commandLine, value, socket, noreply) => {
     let { key, bytes } = commandLine
     let response = ""
@@ -307,6 +428,13 @@ const appendFunction = (commandLine, value, socket, noreply) => {
     sendResponse(socket, response, noreply)
 }
 
+/**
+ * This function represents the "prepend" function from memcached
+ * @param {string} commandLine Command client has put
+ * @param {string} value Value client has put
+ * @param {socket} socket Socket client is connected from
+ * @param {boolean} noreply Boolean representing if client want's the server to respond or not
+ */
 const prependFunction = (commandLine, value, socket, noreply) => {
     let { key, bytes } = commandLine
     let response = ""
@@ -324,17 +452,31 @@ const prependFunction = (commandLine, value, socket, noreply) => {
     sendResponse(socket, response, noreply)
 }
 
+/**
+ * This function is the "set" function from memcached
+ * @param {string} commandLine Command client has put
+ * @param {string} value Value client has put
+ * @param {socket} socket Socket client is connected from
+ * @param {boolean} noreply Boolean representing if client want's the server to respond or not
+ */
 const setFunction = (commandLine, value, socket, noreply) => {
     let { key, flags, exptime, bytes } = commandLine
     putObjectInCache(key, value, flags, exptime, bytes)
     sendResponse(socket, "STORED", noreply)
 }
 
+/**
+ * This function represents the "add" function from memcached
+ * @param {string} commandLine Command client has put
+ * @param {string} value Value client has put
+ * @param {socket} socket Socket client is connected from
+ * @param {boolean} noreply Boolean representing if client want's the server to respond or not
+ */
 const addFunction = (commandLine, value, socket, noreply) => {
     let { key, flags, exptime, bytes } = commandLine
     let response = ""
 
-    //If key isn't in cache I can add it
+    //If key isn't in cache
     if (cache[key] === undefined) {
         putObjectInCache(key, value, flags, exptime, bytes)
         response = "STORED"
@@ -343,11 +485,18 @@ const addFunction = (commandLine, value, socket, noreply) => {
     sendResponse(socket, response, noreply)
 }
 
+/**
+ * This function represents the "replace" function from memcached
+ * @param {string} commandLine Command client has put
+ * @param {string} value Value client has put
+ * @param {socket} socket Socket client is connected from
+ * @param {boolean} noreply Boolean representing if client want's the server to respond or not
+ */
 const replaceFunction = (commandLine, value, socket, noreply) => {
     let { key, flags, exptime, bytes } = commandLine
     let response = ""
 
-    //If key is in cache I can replace it
+    //If key is in cache
     if (cache[key] !== undefined) {
         putObjectInCache(key, value, flags, exptime, bytes)
         response = "STORED"
@@ -356,57 +505,45 @@ const replaceFunction = (commandLine, value, socket, noreply) => {
     sendResponse(socket, response, noreply)
 }
 
-const getFunction = (socket, data) => {
-    let response = ""
-    for (let i = 1; i < data.length; i++) {
-        let cacheObject = cache[data[i]]
-        if (cacheObject !== undefined) {
-            response += `VALUE ${data[i]} ${cacheObject.flags} ${cacheObject.bytes}\n${cacheObject.value}\n`
-        }
-    }
-    response += "END"
-    socket.send(response)
-}
-
-const getsFunction = (socket, data) => {
-    let response = ""
-    for (let i = 1; i < data.length; i++) {
-        let cacheObject = cache[data[i]]
-        if (cacheObject !== undefined) {
-            response += `VALUE ${data[i]} ${cacheObject.flags} ${cacheObject.bytes} ${cacheObject.cas}\n${cacheObject.value}\n`
-        }
-    }
-    response += "END"
-    socket.send(response)
-}
-
+/**
+ * This function is in charge of putting an object in cache
+ * @param {string} key 
+ * @param {string} value 
+ * @param {string} flags 
+ * @param {number} exptime
+ * @param {number} bytes 
+ */
 const putObjectInCache = (key, value, flags, exptime, bytes) => {
     //If exptime < 0 , value is not stored in cache
-    try {
-        if (exptime >= 0) {
-            let newCacheObject = {
-                "value": value,
-                "flags": flags,
-                "exptime": exptime,
-                "bytes": bytes,
-                "cas": currentCas
-            }
-            cache[key] = newCacheObject
-            currentCas++
+    if (exptime >= 0) {
+        let newCacheObject = {
+            "value": value,
+            "flags": flags,
+            "exptime": exptime,
+            "bytes": bytes,
+            "cas": currentCas
         }
-    } catch (error) {
-        console.log(error)
+        cache[key] = newCacheObject
+        currentCas++
     }
 }
 
+/**
+ * This functions resets a user input (command, value and firstLine boolean)
+ * @param {socket} socket Socket client is connected from
+ */
 const resetInput = (socket) => {
     currentClientsInputs[socket.id] = [undefined, "", true]
 }
 
+/**
+ * This function sends a respond to the user depending on "noreply" parameter
+ * @param {socket} socket Socket client is connected from
+ * @param {string} response Response to send
+ * @param {boolean} noreply Boolean representing if client want's the server to respond or not
+ */
 const sendResponse = (socket, response, noreply) => {
     if (!noreply) {
         socket.send(response)
     }
 }
-
-
