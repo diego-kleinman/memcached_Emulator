@@ -1,6 +1,6 @@
 # Memcached emulator
 
-This proyect intend is to emulate memcached, using a personal implementation following the memcached protocol
+This proyect intends to emulate memcached, using a personal implementation following the memcached protocol
 
 ## Necessary resources
 
@@ -24,6 +24,8 @@ Storage commands:
 
 ## Example of usage
 
+EXAMPLES WITH PHOTOS AND DESCRPTIONS
+
 ## Running test cases
 
 ## Extras
@@ -34,11 +36,11 @@ INSERT PHOTO
 
 ### Purging of expired keys
 
-### Management of multiple client´s
+### Management of multiple clients
 
 ## Improvements to do
 
-## Conclusion of the challenge
+## Conclusion
 
 
 
