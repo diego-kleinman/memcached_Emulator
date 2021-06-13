@@ -49,7 +49,9 @@ The management of multiple clients is done with the help of socketio library.
 Socketio enables realtime, bi-directional communication between clients and server; and like Node.js, it is event-driven.
 When a client wants to connect to the server, socketio provides a socket for bi-directional communication between client-server. 
 
-The client connects to the server and the server stores the socketId of the client (as a key) in an object called "currentClientsInputs", this object is the "controller" for multiple inputs of multiple clients; the server has to know depending on which client is sending a message --> 
+The client connects to the server and the server stores the socketId of the client (as a key) in an object called "currentClientsInputs", this object is the "controller" for multiple inputs of multiple clients.
+
+The server has to know depending on which client is sending a message --> 
 
 * Who sent it
 * ¿Message sent is command or value?
