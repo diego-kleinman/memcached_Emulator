@@ -20,6 +20,10 @@ Storage commands:
 * prepend
 * cas
 
+Extra:
+
+* flush_all
+
 ## How to run
 
 ## Example of usage
