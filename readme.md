@@ -40,7 +40,22 @@ INSERT PHOTO
 
 ### Purging of expired keys
 
+The server has a background process (running every second) in charge of "purging" expired keys. 
+It checks every object stored in cache and modifies/deletes the object depending on the property "exptime".
+
 ### Management of multiple clients
+
+The management of multiple clients is done with the help of socketio library.
+Socketio enables realtime, bi-directional communication between clients and server; and like Node.js, it is event-driven.
+When a client wants to connect to the server, socketio provides a socket for bi-directional communication between client-server. 
+
+The client connects to the server and the server stores the socketId of the client (as a key) in an object called "currentClientsInputs", this object is the "controller" for multiple inputs of multiple clients; the server has to know depending on which client is sending a message --> 
+
+* Who sent it
+* ¿The client is sending a command or a value? ( Commmand --> Validate and store ; Value --> Validate with command and store in cache)
+* ¿The client is sending the first line of value input?
+
+According to this data, the server processes the request from the client.
 
 ## Improvements to do
 
