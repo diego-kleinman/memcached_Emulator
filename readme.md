@@ -54,12 +54,19 @@ The client connects to the server and the server stores the socketId of the clie
 The server has to know depending on which client is sending a message --> 
 
 * Who sent it
-* ¿Message sent is command or value?
+* Message type (command or value)
 * If message is value, ¿Is it the first line of value input?
 
 According to this data, the server processes the request from the client.
 
 ## Improvements to do
+
+### Purging process eficciency
+
+The purging process could be more efficient. It goes through all the cache, and process every object.
+But according to memcached protocol, if an object has exptime = 0, it doesn't expire.
+
+The server could have an additional cache to store objects with exptime = 0, in that case the purging process wouldn't have to go through values that don't even have to be checked because they won't expire.
 
 ## Conclusion
 
