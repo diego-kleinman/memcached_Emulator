@@ -33,7 +33,7 @@ Steps to run:
 * Install dependencies --> Execute `npm install` (only in one of the consoles, doesn't matter which one)
 * Execute `node serverSide.js` in the console you want to set as server.
 * Execute `node clientSide.js` in the console you want to set as client.
-* You may want to ser more clients, in that case you have to open more console instances and execute `node clientSide.js` in all of them.
+* You may want to set more clients, in that case you have to open more console instances and execute `node clientSide.js` in all of them.
 
 When you execute the serverSide.js, server will start listening for client connections and clients inputs. You don't have to do nothing else in the console instance running the server.
 
