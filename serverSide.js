@@ -85,8 +85,16 @@ server.listen(port, () => {
 const proccessCommand = (socket, input) => {
     let data = input.trim().split(' ')
     let command = data[0]
+
+    //Reset serverSide
+    if(command === "flush_all"){
+        cache = {}
+        currentCas = 1
+        socket.send("OK")
+        console.log("Serverside has been flushed")
+    }
     //If the command is "get" I just execute the function
-    if (command === "get") {
+    else if (command === "get") {
         getFunction(socket, data)
     }
     //Also for "gets" command
