@@ -34,11 +34,11 @@ INSERT PHOTO
 
 ### Purging of expired keys
 
-## Management of multiple client´s
+### Management of multiple client´s
 
 ## Improvements to do
 
-## Conclusión of the challenge
+## Conclusion of the challenge
 
 
 
