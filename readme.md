@@ -35,7 +35,7 @@ Steps to run:
 * Execute `node clientSide.js` in the console you want to set as client.
 * You may want to set more clients, in that case you must open more console instances and execute `node clientSide.js` in all of them.
 
-When you execute the serverSide.js, server will start listening for client connections and clients inputs. You don't have to do nothing else in the console instance running the server.
+When you execute the serverSide.js, server will start listening for client connections and client inputs. You don't have to do nothing else in the console instance running the server.
 
 When you execute clientSide.js, client will connect to the server and display "connected" on the console instance. From there you can issue commands to the server.
 
