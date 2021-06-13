@@ -40,6 +40,7 @@ When you execute the serverSide.js, server will start listening for client conne
 When you execute clientSide.js, client will connect to the server and display "connected" on the console instance. From there you can issue commands to the server.
 
 In order to stop a client execution you must press "CTRL + C" twice in the console instance running the client, or close the console itself.
+
 In order to stop the server execution you must do the same.
 
 There can't be more than one server executing at the same moment.
