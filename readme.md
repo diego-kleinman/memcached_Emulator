@@ -53,9 +53,8 @@ Steps to run:
 
 * Recommended (If you previously used the server and didn't close it till now) --> From the console not running the server you should execute `node clientSide.js` and from that client issue "flush_all", this will clear the current data from server.
 * Press "CTRL + C" twice to stop the client.
-* From the console not running the server execute `npm test` and wait till finished. (Test cases descriptions and status should be shown in console, if descriptions aren't shown and you want to see them you could execute `npm test --verbose`)
-
-*Después de ejecutarse debería hacerse el flush de nuevo por si se quiere usar o correr nuevamente los tests
+* From the console not running the server execute `npm test` and wait till finished.
+* After running the test cases server should be flushed with steps 1 and 2, otherwise if you execute the test cases again, they will fail, because the server now has data (the data input from previous testing). Also you could close the console instance running the server and run it again.
 
 ## Extras
 
