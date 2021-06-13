@@ -1,6 +1,6 @@
 # Memcached emulator
 
-This proyect intends to emulate memcached, using a personal implementation following the memcached protocol
+The purpose of this project is to implement a memcached server that complies with the specified protocol.
 
 ## Necessary resources
 
@@ -85,9 +85,9 @@ It checks every object stored in cache and modifies/deletes the object depending
 
 ### Management of multiple clients
 
-The management of multiple clients is done with the help of socketio library.
+The management of multiple clients has been implemented using socketio library.
 Socketio enables realtime, bi-directional communication between clients and server; and like Node.js, it is event-driven.
-When a client wants to connect to the server, socketio provides a socket for bi-directional communication between client-server. 
+When a client wants to connect to the server, socketio provides a socket for bi-directional communication between the client and the server. 
 
 The client connects to the server and the server stores the socketId of the client (as a key) in an object called "currentClientsInputs", this object is the "controller" for multiple inputs of multiple clients.
 
@@ -99,7 +99,7 @@ The server has to know depending on which client is sending a message -->
 
 According to this data, the server processes the request from the client.
 
-## Improvements to do
+## Improvements to make
 
 ### Purging process eficciency
 
@@ -111,5 +111,5 @@ The server could have an additional cache to store objects with exptime = 0, in 
 ## Conclusion
 
 It was an interesting challenge to do, I had to investigate a lot and implement (in my own way) a part of a real protocol that is used in a lot of systems worldwide.
-It was challenging but really fun to do, and I think I learnt a lot of usefull things doing it.
+It was challenging but really fun to do, and I think I learnt a lot of useful things doing it.
 
