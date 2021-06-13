@@ -22,7 +22,7 @@ Storage commands:
 
 Extra:
 
-* flush_all
+* flush_all (Not 100% according to memcached protocol), doesn't allow exptime. Flushes when command is sent.
 
 ## How to run
 
