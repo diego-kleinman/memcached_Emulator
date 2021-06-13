@@ -24,7 +24,7 @@ Storage commands:
 
 ## Example of usage
 
-## Run test cases
+## Running test cases
 
 ## Extras
 
