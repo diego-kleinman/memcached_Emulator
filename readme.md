@@ -6,8 +6,6 @@ This proyect intend is to emulate memcached, using a personal implementation fol
 
 In order to run this project you must have [NodeJs](https://nodejs.org/es/download/) installed.
 
-## Architectural design
-
 ## Commands suported
 
 Retrieval commands:
@@ -28,7 +26,19 @@ Storage commands:
 
 ## Run test cases
 
-## Improvements
+## Extras
+
+### Architectural design
+
+INSERT PHOTO
+
+### Purging of expired keys
+
+## Management of multiple client´s
+
+## Improvements to do
+
+## Conclusión of the challenge
 
 
 
