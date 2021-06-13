@@ -52,8 +52,8 @@ When a client wants to connect to the server, socketio provides a socket for bi-
 The client connects to the server and the server stores the socketId of the client (as a key) in an object called "currentClientsInputs", this object is the "controller" for multiple inputs of multiple clients; the server has to know depending on which client is sending a message --> 
 
 * Who sent it
-* ¿Message sent is a command or a value? ( Commmand --> Validate and store ; Value --> Validate with command and store in cache)
-* ¿Client is sending the first line of value input?
+* ¿Message sent is command or value?
+* If message is value, ¿Is it the first line of value input?
 
 According to this data, the server processes the request from the client.
 
