@@ -36,7 +36,7 @@ EXAMPLES WITH PHOTOS AND DESCRPTIONS
 
 ### Architectural design
 
-INSERT PHOTO
+![This is a alt text.](/Diagram.png "This is a diagram image.")
 
 ### Purging of expired keys
 
