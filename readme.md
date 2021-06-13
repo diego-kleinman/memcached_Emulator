@@ -48,7 +48,19 @@ There can't be more than one server executing at the same moment.
 
 ## Example of usage
 
-EXAMPLES WITH PHOTOS AND DESCRPTIONS
+![This is a alt text.](/Example.png "This is a example image.")
+
+Things done:
+
+* Set diego to be "ab"
+* Get diego
+* Add fede to be "abc"
+* Get diego, pepe (don't exist) and fede
+* Replace fede to be "ab"
+* Get fede
+* Gets diego (obtain cas)
+* Cas diego to be "ef"
+* Get diego
 
 ## Running test cases
 
