@@ -10,6 +10,18 @@ In order to run this project you must have [NodeJs](https://nodejs.org/es/downlo
 
 ## Commands suported
 
+Retrieval commands:
+* get
+* gets
+
+Storage commands:
+* set
+* add
+* replace
+* append
+* prepend
+* cas
+
 ## How to run
 
 ## Example of usage
