@@ -70,5 +70,6 @@ The server could have an additional cache to store objects with exptime = 0, in 
 
 ## Conclusion
 
-
+It was an interesting challenge to do, I had to investigate a lot and implement (in my own way) a part of a real protocol that is used in a lot of systems worldwide.
+It was challenging but really fun to do, and I think I learnt a lot of usefull things doing it.
 
