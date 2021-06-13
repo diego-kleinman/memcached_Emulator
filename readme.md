@@ -39,11 +39,23 @@ When you execute the serverSide.js, server will start listening for client conne
 
 When you execute clientSide.js, client will connect to the server and display "connected" on the console instance. From there you can issue commands to the server.
 
+(Server will execute in `localhost 3000`)
+
 ## Example of usage
 
 EXAMPLES WITH PHOTOS AND DESCRPTIONS
 
 ## Running test cases
+
+In order to run the test cases you must have a console instance running the serverSide and another console instance to execute the test cases.
+
+Steps to run:
+
+* Recommended (If you previously used the server and didn't close it till now) --> From the console not running the server you should execute `node clientSide.js` and from that client issue "flush_all", this will clear the current data from server.
+* Press "CTRL + C" twice to stop the client.
+* From the console not running the server execute `npm test` and wait till finished. (Test cases descriptions and status should be shown in console, if descriptions aren't shown and you want to see them you could execute `npm test --verbose`)
+
+*Después de ejecutarse debería hacerse el flush de nuevo por si se quiere usar o correr nuevamente los tests
 
 ## Extras
 
