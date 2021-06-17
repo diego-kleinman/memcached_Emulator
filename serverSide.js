@@ -22,7 +22,7 @@ let currentCas = 1
  * 
  * For example --> "test" : { value = "ab", flags = 2, exptime = 0 , bytes = 2 ,cas = 2 }
  */
-let cache = {
+const cache = {
 }
 
 //socket.id : [ command input, value input, firstInputLine (true,false) ]
@@ -35,7 +35,7 @@ let cache = {
  * 
  * For example --> "12390i20198" : ["set test 2 0 2", "ab", true]
  */
-let currentClientsInputs = {
+const currentClientsInputs = {
 }
 
 // When a client connects to server
@@ -83,8 +83,8 @@ server.listen(port, () => {
  * @param {string} input Command input from client
  */
 const proccessCommand = (socket, input) => {
-    let data = input.trim().split(' ')
-    let command = data[0]
+    const data = input.trim().split(' ')
+    const command = data[0]
 
     //Reset serverSide
     if(command === "flush_all"){
@@ -148,18 +148,17 @@ const processCasHelper = (socket, data) => {
  * @param {[string]} data Array containing command from client splitted by spaces
  */
 const createCommand = (socketId, data) => {
-    // create command
-    let newCommand = {
-        "command": data[0],
-        "key": data[1],
-        "flags": data[2],
-        "exptime": parseInt(data[3]),
-        "bytes": parseInt(data[4]),
-        //it can be something or undefined / optional parameter
-        "noreply": data[5]
-    }
-    // put it in the client input
-    currentClientsInputs[socketId][0] = newCommand
+
+    const command = data[0]
+    const key = data[1]
+    const flags = data[2]
+    const exptime = parseInt(data[3])
+    const bytes = parseInt(data[4])
+    //it can be something or undefined / optional parameter
+    const noreply = data[5]
+    
+    // Create command and put it in the client input
+    currentClientsInputs[socketId][0] = {command,key,flags,exptime,bytes,noreply}
 }
 
 /**
@@ -168,19 +167,17 @@ const createCommand = (socketId, data) => {
  * @param {[string]} data Array containing command from client splitted by spaces
  */
 const createCasCommand = (socketId, data) => {
-    // create cas-command
-    let newCasCommand = {
-        "command": data[0],
-        "key": data[1],
-        "flags": data[2],
-        "exptime": parseInt(data[3]),
-        "bytes": parseInt(data[4]),
-        "cas": parseInt(data[5]),
-        //it can be something or undefined / optional parameter
-        "noreply": data[6]
-    }
-    // put it in the client input
-    currentClientsInputs[socketId][0] = newCasCommand
+
+    const command = data[0]
+    const key = data[1]
+    const flags = data[2]
+    const exptime = parseInt(data[3])
+    const bytes = parseInt(data[4])
+    const cas = parseInt(data[5])
+    //it can be something or undefined / optional parameter
+    const noreply = data[6]
+    // Create command and put it in the client input
+    currentClientsInputs[socketId][0] = {command,key,flags,exptime,bytes,cas,noreply}
 }
 
 /**
@@ -190,12 +187,12 @@ const createCasCommand = (socketId, data) => {
  */
 const processValue = (socket, value) => {
     //Get command that client has put
-    let commandLine = currentClientsInputs[socket.id][0]
+    const commandLine = currentClientsInputs[socket.id][0]
     //Get value that client has put
-    let currentValue = currentClientsInputs[socket.id][1]
+    const currentValue = currentClientsInputs[socket.id][1]
     //Get boolean representing if it's first valueInput line
-    let firstLine = currentClientsInputs[socket.id][2]
-    let trimmed = value.trim()
+    const firstLine = currentClientsInputs[socket.id][2]
+    const trimmed = value.trim()
 
     //If it's first valueInput line, server doesn't count "\n" as an input
     if (firstLine) {
@@ -224,8 +221,8 @@ const proccessValueHelper = (socket, commandLine, currentValue, input) => {
     //If length of (currentValue + input) is exactly as expected 
     //The server processes the input depending on the command asociated
     if (currentValue.length + input.length === commandLine.bytes) {
-        let value = currentValue + input
-        let { noreply } = commandLine
+        const value = currentValue + input
+        const { noreply } = commandLine
         let boolean = false
         //If noreply param is equal to "noreply", server doesn't have to respond
         if (noreply === "noreply") {
@@ -279,7 +276,7 @@ const getFunction = (socket, data) => {
     //Go over all the keys that client want's to get, generate a response matching memcached protocol
     let response = ""
     for (let i = 1; i < data.length; i++) {
-        let cacheObject = cache[data[i]]
+        const cacheObject = cache[data[i]]
         if (cacheObject !== undefined) {
             response += `VALUE ${data[i]} ${cacheObject.flags} ${cacheObject.bytes}\n${cacheObject.value}\n`
         }
@@ -298,7 +295,7 @@ const getsFunction = (socket, data) => {
     //Go over all the keys that client want's to get, generate a response matching memcached protocol
     let response = ""
     for (let i = 1; i < data.length; i++) {
-        let cacheObject = cache[data[i]]
+        const cacheObject = cache[data[i]]
         if (cacheObject !== undefined) {
             response += `VALUE ${data[i]} ${cacheObject.flags} ${cacheObject.bytes} ${cacheObject.cas}\n${cacheObject.value}\n`
         }
@@ -316,7 +313,7 @@ const getsFunction = (socket, data) => {
  * @param {boolean} noreply Boolean representing if client want's the server to respond or not
  */
 const casFunction = (commandLine, value, socket, noreply) => {
-    let { key, flags, exptime, bytes, cas } = commandLine
+    const { key, flags, exptime, bytes, cas } = commandLine
     let response = ""
 
     //If object exists in cache
@@ -345,14 +342,12 @@ const casFunction = (commandLine, value, socket, noreply) => {
  * @param {boolean} noreply Boolean representing if client want's the server to respond or not
  */
 const appendFunction = (commandLine, value, socket, noreply) => {
-    let { key, bytes } = commandLine
+    const { key, bytes } = commandLine
     let response = ""
     //If key is already in cache, append value
     if (cache[key] !== undefined) {
-        let newBytes = cache[key].bytes + bytes
-        let newValue = cache[key].value + value
-        cache[key].bytes = newBytes
-        cache[key].value = newValue
+        cache[key].bytes = cache[key].bytes + bytes
+        cache[key].value = cache[key].value + value
         cache[key].cas = currentCas
         currentCas++
         response = "STORED"
@@ -369,14 +364,12 @@ const appendFunction = (commandLine, value, socket, noreply) => {
  * @param {boolean} noreply Boolean representing if client want's the server to respond or not
  */
 const prependFunction = (commandLine, value, socket, noreply) => {
-    let { key, bytes } = commandLine
+    const { key, bytes } = commandLine
     let response = ""
     //If key is already in cache, prepend value
     if (cache[key] !== undefined) {
-        let newBytes = cache[key].bytes + bytes
-        let newValue = value + cache[key].value
-        cache[key].bytes = newBytes
-        cache[key].value = newValue
+        cache[key].bytes = cache[key].bytes + bytes
+        cache[key].value = value + cache[key].value
         cache[key].cas = currentCas
         currentCas++
         response = "STORED"
@@ -393,7 +386,7 @@ const prependFunction = (commandLine, value, socket, noreply) => {
  * @param {boolean} noreply Boolean representing if client want's the server to respond or not
  */
 const setFunction = (commandLine, value, socket, noreply) => {
-    let { key, flags, exptime, bytes } = commandLine
+    const { key, flags, exptime, bytes } = commandLine
     putObjectInCache(key, value, flags, exptime, bytes)
     sendResponse(socket, "STORED", noreply)
 }
@@ -406,7 +399,7 @@ const setFunction = (commandLine, value, socket, noreply) => {
  * @param {boolean} noreply Boolean representing if client want's the server to respond or not
  */
 const addFunction = (commandLine, value, socket, noreply) => {
-    let { key, flags, exptime, bytes } = commandLine
+    const { key, flags, exptime, bytes } = commandLine
     let response = ""
 
     //If key isn't in cache
@@ -426,7 +419,7 @@ const addFunction = (commandLine, value, socket, noreply) => {
  * @param {boolean} noreply Boolean representing if client want's the server to respond or not
  */
 const replaceFunction = (commandLine, value, socket, noreply) => {
-    let { key, flags, exptime, bytes } = commandLine
+    const { key, flags, exptime, bytes } = commandLine
     let response = ""
 
     //If key is in cache
@@ -449,14 +442,8 @@ const replaceFunction = (commandLine, value, socket, noreply) => {
 const putObjectInCache = (key, value, flags, exptime, bytes) => {
     //If exptime < 0 , value is not stored in cache
     if (exptime >= 0) {
-        let newCacheObject = {
-            "value": value,
-            "flags": flags,
-            "exptime": exptime,
-            "bytes": bytes,
-            "cas": currentCas
-        }
-        cache[key] = newCacheObject
+        const cas = currentCas
+        cache[key] = {value,flags,exptime,bytes,cas}
         currentCas++
     }
 }
