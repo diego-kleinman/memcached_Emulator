@@ -1,5 +1,5 @@
 //Import validator
-const validator = require("./validators")
+const validator = require("./Helpers/validators")
 
 //Create server
 const port = 3000;
@@ -86,28 +86,23 @@ const proccessCommand = (socket, input) => {
     const data = input.trim().split(' ')
     const command = data[0]
 
-    //Reset serverSide
-    if(command === "flush_all"){
-        cache = {}
-        currentCas = 1
-        socket.send("OK")
-        console.log("Serverside has been flushed")
+    const mapper = {
+        'flush_all': () => flushFunction(socket),
+        'get': () => getFunction(socket, data),
+        'gets': () => getsFunction(socket, data),
+        'cas': () => processCasHelper(socket, data),
+        'set': () => processCommandHelper(socket, data),
+        'add': () => processCommandHelper(socket, data),
+        'replace': () => processCommandHelper(socket, data),
+        'append': () => processCommandHelper(socket, data),
+        'prepend': () => processCommandHelper(socket, data)
     }
-    //If the command is "get" I just execute the function
-    else if (command === "get") {
-        getFunction(socket, data)
+
+    //If command exists, execute it
+    if(mapper[command] !== undefined){
+        mapper[command]()
     }
-    //Also for "gets" command
-    else if (command === "gets") {
-        getsFunction(socket, data)
-    }
-    else if (command === "cas") {
-        processCasHelper(socket, data)
-    }
-    else if (command === "set" || command === "add" || command === "replace" || command === "append" || command === "prepend") {
-        processCommandHelper(socket, data)
-    }
-    else {
+    else{
         socket.send("ERROR")
     }
 }
@@ -156,9 +151,9 @@ const createCommand = (socketId, data) => {
     const bytes = parseInt(data[4])
     //it can be something or undefined / optional parameter
     const noreply = data[5]
-    
+
     // Create command and put it in the client input
-    currentClientsInputs[socketId][0] = {command,key,flags,exptime,bytes,noreply}
+    currentClientsInputs[socketId][0] = { command, key, flags, exptime, bytes, noreply }
 }
 
 /**
@@ -177,7 +172,7 @@ const createCasCommand = (socketId, data) => {
     //it can be something or undefined / optional parameter
     const noreply = data[6]
     // Create command and put it in the client input
-    currentClientsInputs[socketId][0] = {command,key,flags,exptime,bytes,cas,noreply}
+    currentClientsInputs[socketId][0] = { command, key, flags, exptime, bytes, cas, noreply }
 }
 
 /**
@@ -186,22 +181,13 @@ const createCasCommand = (socketId, data) => {
  * @param {string} value Value input from client
  */
 const processValue = (socket, value) => {
-    //Get command that client has put
     const commandLine = currentClientsInputs[socket.id][0]
-    //Get value that client has put
     const currentValue = currentClientsInputs[socket.id][1]
-    //Get boolean representing if it's first valueInput line
     const firstLine = currentClientsInputs[socket.id][2]
     const trimmed = value.trim()
+    //If it's first valueInput line, server doesn't count "\n" as an input ; For other lines it is counted
+    firstLine ? proccessValueHelper(socket, commandLine, currentValue, trimmed) : proccessValueHelper(socket, commandLine, currentValue, value)
 
-    //If it's first valueInput line, server doesn't count "\n" as an input
-    if (firstLine) {
-        proccessValueHelper(socket, commandLine, currentValue, trimmed)
-    }
-    //For other lines it is counted
-    else {
-        proccessValueHelper(socket, commandLine, currentValue, value)
-    }
 }
 
 /**
@@ -209,9 +195,9 @@ const processValue = (socket, value) => {
  * 
  * Depending on that it triggers the corresponding action from the server
  * @param {socket} socket Socket client is connected from
- * @param {*} commandLine Command client has put
- * @param {*} currentValue Current value client has put
- * @param {*} input Value client is sending to the server
+ * @param {string} commandLine Command client has put
+ * @param {string} currentValue Current value client has put
+ * @param {string} input Value client is sending to the server
  */
 const proccessValueHelper = (socket, commandLine, currentValue, input) => {
 
@@ -222,35 +208,20 @@ const proccessValueHelper = (socket, commandLine, currentValue, input) => {
     //The server processes the input depending on the command asociated
     if (currentValue.length + input.length === commandLine.bytes) {
         const value = currentValue + input
-        const { noreply } = commandLine
-        let boolean = false
         //If noreply param is equal to "noreply", server doesn't have to respond
-        if (noreply === "noreply") {
-            boolean = true
+        const boolean = (commandLine.noreply === "noreply")
+
+        const mapper = {
+            'set': () => setFunction(commandLine, value, socket, boolean),
+            'add': () => addFunction(commandLine, value, socket, boolean),
+            'replace': () => replaceFunction(commandLine, value, socket, boolean),
+            'append': () => appendFunction(commandLine, value, socket, boolean),
+            'prepend': () => prependFunction(commandLine, value, socket, boolean),
+            'cas': () => casFunction(commandLine, value, socket, boolean)
         }
         //Execute function depending on the command client has put
-        switch (commandLine.command) {
-            case "set":
-                setFunction(commandLine, value, socket, boolean)
-                break;
-            case "add":
-                addFunction(commandLine, value, socket, boolean)
-                break;
-            case "replace":
-                replaceFunction(commandLine, value, socket, boolean)
-                break;
-            case "append":
-                appendFunction(commandLine, value, socket, boolean)
-                break;
-            case "prepend":
-                prependFunction(commandLine, value, socket, boolean)
-                break;
-            case "cas":
-                casFunction(commandLine, value, socket, boolean)
-                break;
-            default:
-                break;
-        }
+        mapper[commandLine.command]()
+
         //After the command is executed, server resets the current input from the client (command, value and firstLine)
         resetInput(socket)
     }
@@ -443,7 +414,7 @@ const putObjectInCache = (key, value, flags, exptime, bytes) => {
     //If exptime < 0 , value is not stored in cache
     if (exptime >= 0) {
         const cas = currentCas
-        cache[key] = {value,flags,exptime,bytes,cas}
+        cache[key] = { value, flags, exptime, bytes, cas }
         currentCas++
     }
 }
@@ -463,9 +434,18 @@ const resetInput = (socket) => {
  * @param {boolean} noreply Boolean representing if client want's the server to respond or not
  */
 const sendResponse = (socket, response, noreply) => {
-    if (!noreply) {
-        socket.send(response)
-    }
+    (noreply) ? null : socket.send(response)
+}
+
+/**
+ * This function flushes the server
+ * @param {socket} socket 
+ */
+const flushFunction = (socket) => {
+    cache = {}
+    currentCas = 1
+    socket.send("OK")
+    console.log("Serverside has been flushed")
 }
 
 /**
