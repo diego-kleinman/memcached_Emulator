@@ -220,10 +220,12 @@ const proccessValueHelper = (socket, commandLine, currentValue, input) => {
             'cas': () => casFunction(commandLine, value, socket, boolean)
         }
         //Execute function depending on the command client has put
-        mapper[commandLine.command]()
-
+        const response = mapper[commandLine.command]()
+        sendResponse(socket,response,boolean)
+        
         //After the command is executed, server resets the current input from the client (command, value and firstLine)
         resetInput(socket)
+        
     }
     //If it's less than expected, the server add's the input to the value and keeps listening for new inputs
     else if (currentValue.length + input.length < commandLine.bytes) {
@@ -280,10 +282,8 @@ const getsFunction = (socket, data) => {
  * This function represents the "cas" function from memcached
  * @param {string} commandLine Command client has put
  * @param {string} value Value client has put
- * @param {socket} socket Socket client is connected from
- * @param {boolean} noreply Boolean representing if client want's the server to respond or not
  */
-const casFunction = (commandLine, value, socket, noreply) => {
+const casFunction = (commandLine, value) => {
     const { key, flags, exptime, bytes, cas } = commandLine
     let response = ""
 
@@ -302,17 +302,15 @@ const casFunction = (commandLine, value, socket, noreply) => {
     else {
         response = "NOT_FOUND"
     }
-    sendResponse(socket, response, noreply)
+    return response
 }
 
 /**
  * This function represents the "append" function from memcached
  * @param {string} commandLine Command client has put
  * @param {string} value Value client has put
- * @param {socket} socket Socket client is connected from
- * @param {boolean} noreply Boolean representing if client want's the server to respond or not
  */
-const appendFunction = (commandLine, value, socket, noreply) => {
+const appendFunction = (commandLine, value) => {
     const { key, bytes } = commandLine
     let response = ""
     //If key is already in cache, append value
@@ -324,17 +322,15 @@ const appendFunction = (commandLine, value, socket, noreply) => {
         response = "STORED"
     }
     else { response = "NOT_STORED" }
-    sendResponse(socket, response, noreply)
+    return response
 }
 
 /**
  * This function represents the "prepend" function from memcached
  * @param {string} commandLine Command client has put
  * @param {string} value Value client has put
- * @param {socket} socket Socket client is connected from
- * @param {boolean} noreply Boolean representing if client want's the server to respond or not
  */
-const prependFunction = (commandLine, value, socket, noreply) => {
+const prependFunction = (commandLine, value) => {
     const { key, bytes } = commandLine
     let response = ""
     //If key is already in cache, prepend value
@@ -346,30 +342,26 @@ const prependFunction = (commandLine, value, socket, noreply) => {
         response = "STORED"
     }
     else { response = "NOT_STORED" }
-    sendResponse(socket, response, noreply)
+    return response
 }
 
 /**
  * This function is the "set" function from memcached
  * @param {string} commandLine Command client has put
  * @param {string} value Value client has put
- * @param {socket} socket Socket client is connected from
- * @param {boolean} noreply Boolean representing if client want's the server to respond or not
  */
-const setFunction = (commandLine, value, socket, noreply) => {
+const setFunction = (commandLine, value) => {
     const { key, flags, exptime, bytes } = commandLine
     putObjectInCache(key, value, flags, exptime, bytes)
-    sendResponse(socket, "STORED", noreply)
+    return "STORED"
 }
 
 /**
  * This function represents the "add" function from memcached
  * @param {string} commandLine Command client has put
  * @param {string} value Value client has put
- * @param {socket} socket Socket client is connected from
- * @param {boolean} noreply Boolean representing if client want's the server to respond or not
  */
-const addFunction = (commandLine, value, socket, noreply) => {
+const addFunction = (commandLine, value) => {
     const { key, flags, exptime, bytes } = commandLine
     let response = ""
 
@@ -379,17 +371,15 @@ const addFunction = (commandLine, value, socket, noreply) => {
         response = "STORED"
     }
     else { response = "NOT_STORED" }
-    sendResponse(socket, response, noreply)
+    return response
 }
 
 /**
  * This function represents the "replace" function from memcached
  * @param {string} commandLine Command client has put
  * @param {string} value Value client has put
- * @param {socket} socket Socket client is connected from
- * @param {boolean} noreply Boolean representing if client want's the server to respond or not
  */
-const replaceFunction = (commandLine, value, socket, noreply) => {
+const replaceFunction = (commandLine, value) => {
     const { key, flags, exptime, bytes } = commandLine
     let response = ""
 
@@ -399,7 +389,7 @@ const replaceFunction = (commandLine, value, socket, noreply) => {
         response = "STORED"
     }
     else { response = "NOT_STORED" }
-    sendResponse(socket, response, noreply)
+    return response
 }
 
 /**
@@ -444,8 +434,8 @@ const sendResponse = (socket, response, noreply) => {
 const flushFunction = (socket) => {
     cache = {}
     currentCas = 1
-    socket.send("OK")
     console.log("Serverside has been flushed")
+    return "OK"
 }
 
 /**
