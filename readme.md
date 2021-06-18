@@ -48,7 +48,7 @@ There can't be more than one server executing at the same moment.
 
 ## Example of usage
 
-![This is a alt text.](/Example.png "This is a example image.")
+![This is a alt text.](/Src/Images/Example.png "This is a example image.")
 
 Things done:
 
@@ -76,7 +76,7 @@ Steps to run:
 
 ### Architectural design
 
-![This is a alt text.](/Diagram.png "This is a diagram image.")
+![This is a alt text.](/Src/Images/Diagram.png "This is a diagram image.")
 
 ### Purging of expired keys
 

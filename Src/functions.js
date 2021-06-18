@@ -1,17 +1,4 @@
-/**
- * Variable that represents the current cas value being used by the server
- * 
- * This value updates everytime a storage function executes
- */
-//  let currentCas = 1
-
-//  /**
-//   * Js object that represents "key : value" pairs currently stored in the server
-//   * 
-//   * For example --> "test" : { value = "ab", flags = 2, exptime = 0 , bytes = 2 ,cas = 2 }
-//   */
-//  const cache = {
-//  }
+const { putObjectInCache } = require('./storageManager')
 
 module.exports = {
     /**
@@ -22,22 +9,15 @@ module.exports = {
     casFunction: (commandLine, value) => {
         const { key, flags, exptime, bytes, cas } = commandLine
         let response = ""
-
-        //If object exists in cache
         if (cache[key] !== undefined) {
             //If cas from parameter corresponds to the object cas
             if (cache[key].cas === cas) {
                 putObjectInCache(key, value, flags, exptime, bytes)
                 response = "STORED"
             }
-            else {
-                response = "EXISTS"
-            }
-
+            else { response = "EXISTS" }
         }
-        else {
-            response = "NOT_FOUND"
-        }
+        else { response = "NOT_FOUND" }
         return response
     },
 
@@ -49,7 +29,6 @@ module.exports = {
     appendFunction: (commandLine, value) => {
         const { key, bytes } = commandLine
         let response = ""
-        //If key is already in cache, append value
         if (cache[key] !== undefined) {
             cache[key].bytes = cache[key].bytes + bytes
             cache[key].value = cache[key].value + value
@@ -69,7 +48,6 @@ module.exports = {
     prependFunction: (commandLine, value) => {
         const { key, bytes } = commandLine
         let response = ""
-        //If key is already in cache, prepend value
         if (cache[key] !== undefined) {
             cache[key].bytes = cache[key].bytes + bytes
             cache[key].value = value + cache[key].value
@@ -100,8 +78,6 @@ module.exports = {
     addFunction: (commandLine, value) => {
         const { key, flags, exptime, bytes } = commandLine
         let response = ""
-
-        //If key isn't in cache
         if (cache[key] === undefined) {
             putObjectInCache(key, value, flags, exptime, bytes)
             response = "STORED"
@@ -118,8 +94,6 @@ module.exports = {
     replaceFunction: (commandLine, value) => {
         const { key, flags, exptime, bytes } = commandLine
         let response = ""
-
-        //If key is in cache
         if (cache[key] !== undefined) {
             putObjectInCache(key, value, flags, exptime, bytes)
             response = "STORED"
@@ -131,7 +105,7 @@ module.exports = {
      * This function flushes the server
      * @param {socket} socket 
      */
-    flushFunction: (socket) => {
+    flushFunction: () => {
         cache = {}
         currentCas = 1
         console.log("Serverside has been flushed")
@@ -142,7 +116,6 @@ module.exports = {
      * @param {[string]} data Array containing command from client splitted by spaces
      */
     getFunction: (socket, data) => {
-        //Go over all the keys that client want's to get, generate a response matching memcached protocol
         let response = ""
         for (let i = 1; i < data.length; i++) {
             const cacheObject = cache[data[i]]
@@ -154,14 +127,12 @@ module.exports = {
         //Send it to the client
         socket.send(response)
     },
-
     /**
      * This function represents the "gets" function from memcached
      * @param {socket} socket Socket client is connected from
      * @param {[string]} data Array containing command from client splitted by spaces
      */
     getsFunction: (socket, data) => {
-        //Go over all the keys that client want's to get, generate a response matching memcached protocol
         let response = ""
         for (let i = 1; i < data.length; i++) {
             const cacheObject = cache[data[i]]
@@ -176,19 +147,3 @@ module.exports = {
 
 }
 
-/**
- * This function is in charge of putting an object in cache
- * @param {string} key 
- * @param {string} value 
- * @param {string} flags 
- * @param {number} exptime
- * @param {number} bytes 
- */
-const putObjectInCache = (key, value, flags, exptime, bytes) => {
-    //If exptime < 0 , value is not stored in cache
-    if (exptime >= 0) {
-        const cas = currentCas
-        cache[key] = { value, flags, exptime, bytes, cas }
-        currentCas++
-    }
-}
