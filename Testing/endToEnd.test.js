@@ -1,94 +1,92 @@
 const Client = require("socket.io-client")
 
-//**************************************TESTING VALUES VALIDATION PROCCESING **********************************************/
-
 describe("Testing proccesing of values", () => {
 
     test("Input '\\n' with bytes = 0 should return STORED", (done) => {
         let messageRecieved = ""
-        clientSocket9 = new Client(`http://localhost:${3000}`)
-        clientSocket9.on('connect', () => { })
-        clientSocket9.on('message', (data) => {
+        clientSocket1 = new Client(`http://localhost:${3000}`)
+        clientSocket1.on('connect', () => { })
+        clientSocket1.on('message', (data) => {
             messageRecieved = data
-            clientSocket9.close()
+            clientSocket1.close()
             expect(messageRecieved).toBe("STORED")
             done()
         })
-        clientSocket9.emit('message', 'set diego 2 0 0')
-        clientSocket9.emit('message', '\n')
+        clientSocket1.emit('message', 'set diego 2 0 0')
+        clientSocket1.emit('message', '\n')
     })
 
     test("Input length > bytes defined should return CLIENT_ERROR bad data chunk", (done) => {
         let messageRecieved = ""
-        clientSocket10 = new Client(`http://localhost:${3000}`)
-        clientSocket10.on('connect', () => { })
-        clientSocket10.on('message', (data) => {
+        clientSocket2 = new Client(`http://localhost:${3000}`)
+        clientSocket2.on('connect', () => { })
+        clientSocket2.on('message', (data) => {
             messageRecieved = data
-            clientSocket10.close()
+            clientSocket2.close()
             expect(messageRecieved).toBe("CLIENT_ERROR bad data chunk")
             done()
         })
-        clientSocket10.emit('message', 'set diego 2 2 2')
-        clientSocket10.emit('message', 'abc')
+        clientSocket2.emit('message', 'set diego 2 2 2')
+        clientSocket2.emit('message', 'abc')
     })
 
     test("Input length > bytes defined (In two different inputs combined) should return CLIENT_ERROR bad data chunk", (done) => {
         let messageRecieved = ""
-        clientSocket11 = new Client(`http://localhost:${3000}`)
-        clientSocket11.on('connect', () => { })
-        clientSocket11.on('message', (data) => {
+        clientSocket3 = new Client(`http://localhost:${3000}`)
+        clientSocket3.on('connect', () => { })
+        clientSocket3.on('message', (data) => {
             messageRecieved = data
-            clientSocket11.close()
+            clientSocket3.close()
             expect(messageRecieved).toBe("CLIENT_ERROR bad data chunk")
             done()
         })
-        clientSocket11.emit('message', 'set diego 2 2 2')
-        clientSocket11.emit('message', 'a')
-        clientSocket11.emit('message', 'bc')
+        clientSocket3.emit('message', 'set diego 2 2 2')
+        clientSocket3.emit('message', 'a')
+        clientSocket3.emit('message', 'bc')
     })
 
     test("Input length === bytes defined should return STORED", (done) => {
         let messageRecieved = ""
-        clientSocket12 = new Client(`http://localhost:${3000}`)
-        clientSocket12.on('connect', () => { })
-        clientSocket12.on('message', (data) => {
+        clientSocket4 = new Client(`http://localhost:${3000}`)
+        clientSocket4.on('connect', () => { })
+        clientSocket4.on('message', (data) => {
             messageRecieved = data
-            clientSocket12.close()
+            clientSocket4.close()
             expect(messageRecieved).toBe("STORED")
             done()
         })
-        clientSocket12.emit('message', 'set diego 2 0 2')
-        clientSocket12.emit('message', 'ab')
+        clientSocket4.emit('message', 'set diego 2 0 2')
+        clientSocket4.emit('message', 'ab')
     })
 
     test("Input length === bytes (In two different inputs combined) defined should return STORED", (done) => {
         let messageRecieved = ""
-        clientSocket13 = new Client(`http://localhost:${3000}`)
-        clientSocket13.on('connect', () => { })
-        clientSocket13.on('message', (data) => {
+        clientSocket5 = new Client(`http://localhost:${3000}`)
+        clientSocket5.on('connect', () => { })
+        clientSocket5.on('message', (data) => {
             messageRecieved = data
-            clientSocket13.close()
+            clientSocket5.close()
             expect(messageRecieved).toBe("STORED")
             done()
         })
-        clientSocket13.emit('message', 'set diego 2 0 2')
-        clientSocket13.emit('message', 'a')
-        clientSocket13.emit('message', 'b')
+        clientSocket5.emit('message', 'set diego 2 0 2')
+        clientSocket5.emit('message', 'a')
+        clientSocket5.emit('message', 'b')
     })
 
     test("Input '\\n' and '\\n' with bytes = 2 should return STORED", (done) => {
         let messageRecieved = ""
-        clientSocket14 = new Client(`http://localhost:${3000}`)
-        clientSocket14.on('connect', () => { })
-        clientSocket14.on('message', (data) => {
+        clientSocket6 = new Client(`http://localhost:${3000}`)
+        clientSocket6.on('connect', () => { })
+        clientSocket6.on('message', (data) => {
             messageRecieved = data
-            clientSocket14.close()
+            clientSocket6.close()
             expect(messageRecieved).toBe("STORED")
             done()
         })
-        clientSocket14.emit('message', 'set diego 2 0 2')
-        clientSocket14.emit('message', '\n')
-        clientSocket14.emit('message', '\n')
+        clientSocket6.emit('message', 'set diego 2 0 2')
+        clientSocket6.emit('message', '\n')
+        clientSocket6.emit('message', '\n')
     })
 })
 

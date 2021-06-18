@@ -11,7 +11,6 @@ module.exports = {
     proccessCommand: (socket, input) => {
         const data = input.trim().split(' ')
         const command = data[0]
-        let response = ''
         
         const mapper = {
             'flush_all': () => flushFunction(),
@@ -28,7 +27,7 @@ module.exports = {
         if (mapper[command] !== undefined) {
             //These commands have direct responses
             if(command === "get" || command === "gets" || command == "flush_all"){
-                response = mapper[command]()
+                const response = mapper[command]()
                 socket.send(response)
             }
             //Other commands are just to create the command
