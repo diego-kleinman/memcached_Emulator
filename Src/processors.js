@@ -11,10 +11,12 @@ module.exports = {
     proccessCommand: (socket, input) => {
         const data = input.trim().split(' ')
         const command = data[0]
+        let response = ''
+        
         const mapper = {
             'flush_all': () => flushFunction(),
-            'get': () => getFunction(socket, data),
-            'gets': () => getsFunction(socket, data),
+            'get': () => getFunction(data,response),
+            'gets': () => getsFunction(data,response),
             'cas': () => processCasHelper(socket, data),
             'set': () => processCommandHelper(socket, data),
             'add': () => processCommandHelper(socket, data),
@@ -24,7 +26,15 @@ module.exports = {
         }
         //If command exists, execute it
         if (mapper[command] !== undefined) {
-            mapper[command]()
+            //These commands have direct responses
+            if(command === "get" || command === "gets" || command == "flush_all"){
+                response = mapper[command]()
+                socket.send(response)
+            }
+            //Other commands are just to create the command
+            else{
+                mapper[command]()
+            }
         }
         else {
             socket.send("ERROR")
@@ -97,12 +107,12 @@ const proccessValueHelper = (socket, commandLine, currentValue, input) => {
         const boolean = (commandLine.noreply === "noreply")
 
         const mapper = {
-            'set': () => setFunction(commandLine, value, socket, boolean),
-            'add': () => addFunction(commandLine, value, socket, boolean),
-            'replace': () => replaceFunction(commandLine, value, socket, boolean),
-            'append': () => appendFunction(commandLine, value, socket, boolean),
-            'prepend': () => prependFunction(commandLine, value, socket, boolean),
-            'cas': () => casFunction(commandLine, value, socket, boolean)
+            'set': () => setFunction(commandLine, value),
+            'add': () => addFunction(commandLine, value),
+            'replace': () => replaceFunction(commandLine, value),
+            'append': () => appendFunction(commandLine, value),
+            'prepend': () => prependFunction(commandLine, value),
+            'cas': () => casFunction(commandLine, value)
         }
         //Execute function depending on the command client has put
         const response = mapper[commandLine.command]()

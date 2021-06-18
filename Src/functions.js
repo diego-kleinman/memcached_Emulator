@@ -109,13 +109,14 @@ module.exports = {
         cache = {}
         currentCas = 1
         console.log("Serverside has been flushed")
+        return "OK"
     },
     /**
      * This function represents the "get" function from memcached
      * @param {socket} socket Socket client is connected from
      * @param {[string]} data Array containing command from client splitted by spaces
      */
-    getFunction: (socket, data) => {
+    getFunction: (data) => {
         let response = ""
         for (let i = 1; i < data.length; i++) {
             const cacheObject = cache[data[i]]
@@ -124,15 +125,14 @@ module.exports = {
             }
         }
         response += "END"
-        //Send it to the client
-        socket.send(response)
+        return response
     },
     /**
      * This function represents the "gets" function from memcached
      * @param {socket} socket Socket client is connected from
      * @param {[string]} data Array containing command from client splitted by spaces
      */
-    getsFunction: (socket, data) => {
+    getsFunction: (data) => {
         let response = ""
         for (let i = 1; i < data.length; i++) {
             const cacheObject = cache[data[i]]
@@ -141,8 +141,7 @@ module.exports = {
             }
         }
         response += "END"
-        //Send it to the client
-        socket.send(response)
+        return response
     }
 
 }
