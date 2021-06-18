@@ -14,8 +14,8 @@ module.exports = {
         
         const mapper = {
             'flush_all': () => flushFunction(),
-            'get': () => getFunction(data,response),
-            'gets': () => getsFunction(data,response),
+            'get': () => getFunction(data),
+            'gets': () => getsFunction(data),
             'cas': () => processCasHelper(socket, data),
             'set': () => processCommandHelper(socket, data),
             'add': () => processCommandHelper(socket, data),
